@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholder values so the app builds in CI; real values live in your hosting provider.
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Each step saves its output; if it fails, the last lines are attached to
+      # the run as an annotation so the cause shows on the run summary.
+      - name: Install
+        run: npm ci 2>&1 | tee /tmp/install.log; exit ${PIPESTATUS[0]}
+      - name: Test
+        run: npm test 2>&1 | tee /tmp/test.log; exit ${PIPESTATUS[0]}
+      - name: Build
+        run: npm run build 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
+
+      - name: Report failure
+        if: failure()
+        run: |
+          for f in /tmp/install.log /tmp/test.log /tmp/build.log; do
+            [ -s "$f" ] || continue
+            tail -40 "$f" | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' > /tmp/msg
+            echo "::error title=$(basename $f .log) output::$(cat /tmp/msg)"
+          done

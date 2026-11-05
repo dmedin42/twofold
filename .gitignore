@@ -1,0 +1,12 @@
+node_modules
+dist
+.vercel
+
+# Environment variables (never commit real values; see .env.example)
+.env
+.env.*
+!.env.example
+
+# Supabase CLI local state
+supabase/.temp
+supabase/.branches
