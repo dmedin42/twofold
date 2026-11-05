@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useBackgroundTasks } from '@/contexts/BackgroundTaskContext';
 import RecipeFilterChips from './RecipeFilterChips';
-import { RecipeFilterType, StagedRecipe } from '@/types/recipe';
+import { RECIPE_FILTERS, RecipeFilterType, StagedRecipe } from '@/types/recipe';
 import { getTopExpiringItems, getExpiringItems } from '@/lib/recipeBridge';
 import { getDaysUntilExpiry } from '@/data/expiryUtils';
 import { Sparkles, AlertTriangle, Users, X, Clock, ArrowRight } from 'lucide-react';
@@ -152,8 +152,9 @@ const RescueBridgeWidget: React.FC<RescueBridgeWidgetProps> = ({ onRecipeSaved, 
       metrics: { prep_time: prepTime, cook_time: cookTime }
     };
 
-    // Passing the recipe and its tags to the cookbook
-    addSavedRecipe(newRecipe, selectedFilters);
+    // Tag the recipe with the filter labels, which is what the cookbook chips filter on
+    const tags = selectedFilters.map(id => RECIPE_FILTERS.find(f => f.id === id)?.label ?? id);
+    addSavedRecipe(newRecipe, tags);
     
     toast.success(`"${newRecipe.title}" is officially on the menu!`);
     onRecipeSaved?.(newRecipe);

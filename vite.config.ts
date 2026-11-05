@@ -45,11 +45,14 @@ export default defineConfig(() => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Supabase reads go to the network first so new rows show up right away; the
+        // cached copy is only used when the network is slow or offline.
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/inventory_items/,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
+              networkTimeoutSeconds: 4,
               cacheName: 'inventory-cache',
               expiration: {
                 maxEntries: 50,
@@ -62,8 +65,9 @@ export default defineConfig(() => ({
           },
           {
             urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/grocery_list_items/,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
+              networkTimeoutSeconds: 4,
               cacheName: 'groceries-cache',
               expiration: {
                 maxEntries: 50,
@@ -76,8 +80,9 @@ export default defineConfig(() => ({
           },
           {
             urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/recipes/,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
+              networkTimeoutSeconds: 4,
               cacheName: 'recipes-cache',
               expiration: {
                 maxEntries: 100,

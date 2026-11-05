@@ -150,7 +150,7 @@ const DinnerMatch: React.FC = () => {
         metrics: { prep_time: prepTime, cook_time: cookTime },
       };
 
-      addSavedRecipe(staged, ['dinner_match']);
+      addSavedRecipe(staged, ['Dinner Match']);
       toast.success(`"${staged.title}" saved to cookbook! 📖`);
     } catch (err: any) {
       console.error('Recipe expansion error:', err);

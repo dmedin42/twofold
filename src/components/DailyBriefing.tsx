@@ -137,7 +137,7 @@ const DailyBriefing: React.FC = () => {
         },
       };
 
-      addSavedRecipe(staged, ['daily_briefing']);
+      addSavedRecipe(staged, ['Daily Briefing']);
       toast.success(`"${staged.title}" saved to cookbook! 📖`);
     } catch (err: any) {
       console.error('Briefing save error:', err);
