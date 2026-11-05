@@ -91,7 +91,7 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent`
 
     // Fetch the raw HTML of the recipe page
     const siteResponse = await fetch(url)
@@ -118,7 +118,7 @@ serve(async (req) => {
 
     const geminiRes = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
     })
 

@@ -13,7 +13,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get('GEMINI_API_KEY')
     if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
 
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent`
 
     // 1. SAFE DATA PARSING (Prevents crashes if data is missing or wrong format)
     const recipeName = recipeContext?.name || recipeContext?.title || "Current Recipe";
@@ -49,7 +49,7 @@ serve(async (req) => {
 
     const response = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
     })
 

@@ -9,9 +9,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    // FIX 1: Use the correct Environment Variable name
-    const apiKey = Deno.env.get('rescue-recipe')
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not set in Supabase Secrets')
+    const apiKey = Deno.env.get('GEMINI_API_KEY')
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
 
     const { ingredients, filters, customNote, servings } = await req.json()
 
@@ -49,11 +48,11 @@ serve(async (req) => {
     `
 
     // FIX 3: Use Gemini 2.0 Flash (not lite) for better reasoning
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
 
     const response = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: systemPrompt }] }],
         generationConfig: {

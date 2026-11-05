@@ -12,9 +12,9 @@ serve(async (req) => {
   try {
     const sbUrl = Deno.env.get('SUPABASE_URL');
     const sbKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const apiKey = Deno.env.get('dinner-match');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
 
-    if (!apiKey) throw new Error('dinner-match secret is not set');
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
     // 1. CIRCUIT BREAKER CHECK
     if (sbUrl && sbKey) {
@@ -77,11 +77,11 @@ serve(async (req) => {
     `;
 
     // 4. CALL GEMINI WITH JSON CONSTRAINT
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent`;
 
     const response = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: systemPrompt }] }],
         generationConfig: {

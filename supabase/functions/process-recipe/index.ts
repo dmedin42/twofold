@@ -9,8 +9,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const apiKey = Deno.env.get('process-recipe')
-    if (!apiKey) throw new Error('process-recipe is not set')
+    const apiKey = Deno.env.get('GEMINI_API_KEY')
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
 
     // Parse Input: Expect Image Data
     const { image: rawImage, mimeType = 'image/jpeg' } = await req.json()
@@ -44,11 +44,11 @@ serve(async (req) => {
       }
     `
 
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
 
     const response = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{
           parts: [

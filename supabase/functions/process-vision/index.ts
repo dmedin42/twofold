@@ -12,8 +12,8 @@ serve(async (req) => {
   try {
     console.log("--> SCAN REQUEST RECEIVED");
 
-    const apiKey = Deno.env.get('process-vision')
-    if (!apiKey) throw new Error("process-vision is not set in Secrets")
+    const apiKey = Deno.env.get('GEMINI_API_KEY')
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
 
     let body;
     try {
@@ -27,15 +27,16 @@ serve(async (req) => {
     const inputImage = image || imageBase64;
     if (!inputImage) throw new Error("No image data received");
 
-    // Safety Fallback for the Executive Chef Dashboard
-    const activeHouseholdId = household_id || 'e6f9634b-b195-4621-ba3e-a3e5975cd24d';
+    // Items are only returned to the caller, never written here; the client saves them
+    // to its own household under row-level security.
+    const activeHouseholdId = household_id ?? null;
 
     const pureBase64 = inputImage.includes(',') ? inputImage.split(',')[1] : inputImage;
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
     const response = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{
           parts: [
