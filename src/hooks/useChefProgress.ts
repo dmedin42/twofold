@@ -12,15 +12,16 @@ const PHASE_GOALS: Record<ChefPhase, string> = {
 4: "You've unlocked everything! 🎉" 
 };
 
-export function useChefProgress(data: MilestoneData, isLoading: boolean, userId?: string) {
+export function useChefProgress(data: MilestoneData, isLoading: boolean, userId?: string, unlockAll = false) {
 const [showConfetti, setShowConfetti] = useState(false);
 
 const currentPhase = useMemo(() => {
+if (unlockAll) return 4;
 if (data.householdMemberCount >= 2 && data.firstCookingModeAt) return 4;
 if (data.firstRecipeSavedAt && data.firstCookingModeAt) return 3;
 if (data.itemsAddedCount >= 3) return 2;
 return 1;
-}, [data]);
+}, [data, unlockAll]);
 
 const visibleWidgets = useMemo(() => {
 const widgets: string[] = ['priorities'];

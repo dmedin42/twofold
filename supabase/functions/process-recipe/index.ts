@@ -5,12 +5,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Gemini sometimes answers 503 ("model is experiencing high demand"), 429 or 500
+// during traffic spikes. Retry twice with a short backoff so a passing spike
+// doesn't reach the user.
+async function fetchGemini(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init)
+    if (attempt >= retries || ![429, 500, 503].includes(res.status)) return res
+    await res.body?.cancel()
+    console.warn(`Gemini returned ${res.status}, retrying (${attempt + 1}/${retries})`)
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1) + Math.random() * 500))
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const apiKey = Deno.env.get('GEMINI_API_KEY')
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
+    const apiKey = Deno.env.get('process-recipe')
+    if (!apiKey) throw new Error('process-recipe secret is not set')
 
     // Parse Input: Expect Image Data
     const { image: rawImage, mimeType = 'image/jpeg' } = await req.json()
@@ -46,7 +59,7 @@ serve(async (req) => {
 
     const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
 
-    const response = await fetch(GEMINI_URL, {
+    const response = await fetchGemini(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({

@@ -8,7 +8,8 @@ export type { ChefPhase } from './useChefProgress';
 export function useChefJourney() {
   const { user } = useAuthContext();
   const { data, isLoading, refetch, recordMilestone } = useChefData();
-  const { currentPhase, showConfetti, phaseName, phaseGoal, visibleWidgets } = useChefProgress(data, isLoading, user?.id);
+  // Guests are exploring the demo, so they start with every feature unlocked.
+  const { currentPhase, showConfetti, phaseName, phaseGoal, visibleWidgets } = useChefProgress(data, isLoading, user?.id, user?.is_anonymous === true);
 
   const progressPercent = (currentPhase / 4) * 100;
 
@@ -21,7 +22,7 @@ export function useChefJourney() {
     isLoading,
     showConfetti,
     recordMilestone, // Dashboard needs this
-    visibleWidgets,  // Dashboard needs this (this fixes the red error!)
+    visibleWidgets,  // Dashboard needs this
     refetch
   };
 }

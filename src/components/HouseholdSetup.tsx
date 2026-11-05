@@ -68,27 +68,12 @@ const HouseholdSetup: React.FC<HouseholdSetupProps> = ({ onComplete }) => {
     
     setIsLoading(true);
     try {
-      const { data: households, error: findError } = await (supabase as any)
-        .from('households')
-        .select('id, name')
-        .ilike('join_code', joinCode.trim())
-        .limit(1);
+      // The database checks the code and links the profile in one step, so the
+      // browser never needs read access to other households.
+      const { data: household, error: joinError } = await (supabase as any)
+        .rpc('join_household', { code: joinCode.trim() });
 
-      if (findError) throw findError;
-      
-      if (!households || households.length === 0) {
-        throw new Error('Invalid join code');
-      }
-
-      const household = households[0];
-
-      // 2. Update the user's profile to link to the household
-      const { error: profileError } = await (supabase as any)
-        .from('profiles')
-        .update({ household_id: household.id })
-        .eq('user_id', user.id);
-
-      if (profileError) throw profileError;
+      if (joinError) throw new Error(joinError.message);
 
       toast.success('Joined household!', {
         description: `You are now part of ${household.name}`,

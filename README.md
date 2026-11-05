@@ -4,7 +4,7 @@
 
 Most food waste happens quietly: groceries get pushed to the back of the fridge, forgotten, and thrown out. TwoFold keeps a live inventory of a household's kitchen, warns before things expire, and uses AI to turn what's about to go bad into a real meal.
 
-**Live demo:** https://twofoldkitchen.com
+**Live demo:** https://twofoldkitchen.com (choose **Explore as a guest** to try it without an account)
 
 ## Features
 
@@ -17,6 +17,17 @@ Most food waste happens quietly: groceries get pushed to the back of the fridge,
 - **Household planning.** Shared households with member profiles, dinner polls, and potluck sign-up boards with public share links.
 - **Impact reporting.** Monthly waste reports and zero-waste badges that track money and food saved.
 - **Works offline.** Installable PWA with cached inventory, groceries, and recipes, plus a Capacitor config for native builds.
+
+## Guest mode
+
+Visitors can explore the full app without signing up:
+
+- **Explore as a guest** starts a Supabase anonymous session. The signup trigger (`handle_new_user`) gives every guest their own "Guest Kitchen" seeded with sample pantry items (some expiring today), a grocery list, recipes, and savings history.
+- Guests see every feature right away instead of unlocking them step by step.
+- An hourly `pg_cron` job (`cleanup_guest_users`) deletes guest accounts older than 24 hours, along with their households and data.
+- Guests can't join other households, and row-level security keeps each guest's data private, the same as a regular account.
+
+Turn on **Allow anonymous sign-ins** in the Supabase dashboard (**Authentication → Sign In / Providers**) for guest mode to work.
 
 ## Tech stack
 
@@ -57,7 +68,7 @@ npm run dev             # http://localhost:8080
 
 ### Backend setup
 
-1. Create the database schema from `supabase/migrations/` and `docs/database-schema.sql`.
+1. Create the database schema from `supabase/migrations/` and `docs/database-schema.sql`. The guest mode migration also enables `pg_cron`.
 2. Deploy the Edge Functions: `supabase functions deploy`.
 3. Add a Google Gemini API key as Supabase secrets (**Edge Functions → Secrets**). They are never sent to the browser. Some functions read a secret named after themselves, so each can use its own key:
 
@@ -70,6 +81,8 @@ npm run dev             # http://localhost:8080
 | `dinner-match` | Meal ideas and the daily briefing |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to Edge Functions automatically.
+
+The key is sent to Gemini in the `x-goog-api-key` header, never in a URL. When Gemini is briefly overloaded (HTTP 429, 500, or 503), each function retries twice with a short backoff before returning an error.
 
 ## Scripts
 

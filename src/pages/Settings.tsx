@@ -83,7 +83,7 @@ const Settings: React.FC = () => {
                 </div>
                 <div>
                   <CardTitle className="font-display">Account</CardTitle>
-                  <CardDescription>{user?.email}</CardDescription>
+                  <CardDescription>{user?.is_anonymous ? 'Guest session (resets after 24 hours)' : user?.email}</CardDescription>
                 </div>
               </div>
             </CardHeader>

@@ -5,6 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+// Gemini sometimes answers 503 ("model is experiencing high demand"), 429 or 500
+// during traffic spikes. Retry twice with a short backoff so a passing spike
+// doesn't reach the user.
+async function fetchGemini(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init)
+    if (attempt >= retries || ![429, 500, 503].includes(res.status)) return res
+    await res.body?.cancel()
+    console.warn(`Gemini returned ${res.status}, retrying (${attempt + 1}/${retries})`)
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1) + Math.random() * 500))
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -12,9 +25,9 @@ serve(async (req) => {
   try {
     const sbUrl = Deno.env.get('SUPABASE_URL');
     const sbKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    const apiKey = Deno.env.get('dinner-match');
 
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+    if (!apiKey) throw new Error('dinner-match secret is not set');
 
     // 1. CIRCUIT BREAKER CHECK
     if (sbUrl && sbKey) {
@@ -79,7 +92,7 @@ serve(async (req) => {
     // 4. CALL GEMINI WITH JSON CONSTRAINT
     const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent`;
 
-    const response = await fetch(GEMINI_URL, {
+    const response = await fetchGemini(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({

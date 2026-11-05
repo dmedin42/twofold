@@ -12,6 +12,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import BackgroundTaskIndicator from "@/components/BackgroundTaskIndicator";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Loader2 } from "lucide-react";
+import GuestBanner from "@/components/GuestBanner";
 
 // --- Lazy Loads ---
 const Auth = lazy(() => import("./pages/Auth"));
@@ -61,7 +62,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) return <Navigate to="/auth" replace />;
   if (hasHousehold === false) return <Navigate to="/onboarding" replace />;
   
-  return <>{children}</>;
+  return (
+    <>
+      {user.is_anonymous && <GuestBanner />}
+      {children}
+    </>
+  );
 };
 
 const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {

@@ -9,6 +9,19 @@ const corsHeaders = {
 
 console.log("🟢 SYSTEM ONLINE: Kitchen Agent v8.0 (Potluck Edition)");
 
+// Gemini sometimes answers 503 ("model is experiencing high demand"), 429 or 500
+// during traffic spikes. Retry twice with a short backoff so a passing spike
+// doesn't reach the user.
+async function fetchGemini(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init)
+    if (attempt >= retries || ![429, 500, 503].includes(res.status)) return res
+    await res.body?.cancel()
+    console.warn(`Gemini returned ${res.status}, retrying (${attempt + 1}/${retries})`)
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1) + Math.random() * 500))
+  }
+}
+
 serve(async (req) => {
   // 1. CORS Handshake
   if (req.method === 'OPTIONS') {
@@ -78,7 +91,7 @@ Return ONLY valid JSON. No markdown code blocks.`;
     }
 
     // 4. Call Gemini 2.5 Flash-Lite
-    const response = await fetch(
+    const response = await fetchGemini(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent`,
       {
         method: 'POST',

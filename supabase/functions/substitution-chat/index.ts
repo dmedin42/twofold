@@ -1,8 +1,21 @@
-﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+}
+
+// Gemini sometimes answers 503 ("model is experiencing high demand"), 429 or 500
+// during traffic spikes. Retry twice with a short backoff so a passing spike
+// doesn't reach the user.
+async function fetchGemini(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init)
+    if (attempt >= retries || ![429, 500, 503].includes(res.status)) return res
+    await res.body?.cancel()
+    console.warn(`Gemini returned ${res.status}, retrying (${attempt + 1}/${retries})`)
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1) + Math.random() * 500))
+  }
 }
 
 serve(async (req) => {
@@ -47,7 +60,7 @@ serve(async (req) => {
       5. Tone: Helpful, encouraging, professional.
     `
 
-    const response = await fetch(GEMINI_URL, {
+    const response = await fetchGemini(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })

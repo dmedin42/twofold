@@ -80,6 +80,19 @@ const parseServings = (servingsStr: string | number | undefined): number => {
   return match ? parseInt(match[1]) : 4;
 };
 
+// Gemini sometimes answers 503 ("model is experiencing high demand"), 429 or 500
+// during traffic spikes. Retry twice with a short backoff so a passing spike
+// doesn't reach the user.
+async function fetchGemini(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init)
+    if (attempt >= retries || ![429, 500, 503].includes(res.status)) return res
+    await res.body?.cancel()
+    console.warn(`Gemini returned ${res.status}, retrying (${attempt + 1}/${retries})`)
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1) + Math.random() * 500))
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -116,7 +129,7 @@ serve(async (req) => {
       HTML content: ${html.substring(0, 15000)}
     `
 
-    const geminiRes = await fetch(GEMINI_URL, {
+    const geminiRes = await fetchGemini(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })

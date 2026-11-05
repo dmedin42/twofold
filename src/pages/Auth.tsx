@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Mail, Lock, User, AlertCircle, Check } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Check, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import PrivacyPolicyDialog from '@/components/PrivacyPolicyDialog';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, loading } = useAuth();
   
   const [email, setEmail] = useState('');
@@ -21,6 +23,21 @@ const Auth: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [isStartingGuest, setIsStartingGuest] = useState(false);
+
+  // Guest mode: an anonymous Supabase session. The signup trigger gives it its own
+  // sample kitchen, and guest accounts are deleted automatically after 24 hours.
+  const handleGuest = async () => {
+    setIsStartingGuest(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      setIsStartingGuest(false);
+      toast.error("Couldn't start a guest session", { description: error.message });
+      return;
+    }
+    toast.success('Welcome to your sample kitchen!');
+    navigate('/dashboard');
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,11 +139,39 @@ const Auth: React.FC = () => {
           <CardHeader className="text-center pb-4">
             <CardTitle className="font-display text-2xl">Welcome</CardTitle>
             <CardDescription>
-              Sign in to manage your household's kitchen
+              Try the demo, or sign in to your household's kitchen
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
+            <Button
+              type="button"
+              className="w-full h-12 rounded-xl"
+              onClick={handleGuest}
+              disabled={isStartingGuest || isSubmitting}
+            >
+              {isStartingGuest ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Setting up your kitchen...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Explore as a guest
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              No account needed. You get a sample kitchen that resets after 24 hours.
+            </p>
+
+            <div className="flex items-center gap-3 my-6" aria-hidden="true">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <Tabs defaultValue={searchParams.get('tab') === 'signup' ? 'signup' : 'signin'} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="signin" className="rounded-lg">Sign In</TabsTrigger>
                 <TabsTrigger value="signup" className="rounded-lg">Sign Up</TabsTrigger>
