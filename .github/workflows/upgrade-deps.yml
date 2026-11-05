@@ -1,0 +1,61 @@
+# One-time helper: upgrades vulnerable dependencies, then only commits if
+# tests and the production build still pass. Reports results as annotations.
+name: Upgrade dependencies
+
+on:
+  push:
+    paths: [".github/workflows/upgrade-deps.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Upgrade
+        run: |
+          {
+            npm ci --no-audit --no-fund &&
+            npm uninstall zod @hookform/resolvers @tailwindcss/typography --no-audit --no-fund &&
+            npm install react-router-dom@^7 --no-audit --no-fund &&
+            npm install -D vitest@^5 --no-audit --no-fund
+          } 2>&1 | tee /tmp/upgrade.log; exit ${PIPESTATUS[0]}
+      - name: Test
+        run: npm test 2>&1 | tee /tmp/test.log; exit ${PIPESTATUS[0]}
+      - name: Build
+        run: npm run build 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
+      - name: Audit
+        if: always()
+        run: |
+          npm audit --json > /tmp/audit.json || true
+          node -e '
+            const fs = require("fs");
+            const a = JSON.parse(fs.readFileSync("/tmp/audit.json", "utf8"));
+            const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const d = {...p.dependencies, ...p.devDependencies};
+            const rows = Object.values(a.vulnerabilities || {}).map(v => `${v.severity.toUpperCase()} ${v.name} ${v.range}`);
+            const pick = ["vite","vitest","react-router-dom","vite-plugin-pwa"].map(k => `${k}=${d[k]}`).join(" ");
+            console.log(`::warning title=audit::${pick}%0A${JSON.stringify(a.metadata?.vulnerabilities)}%0A${rows.join("%0A")}`);'
+      - name: Report failure
+        if: failure()
+        run: |
+          for f in /tmp/upgrade.log /tmp/test.log /tmp/build.log; do
+            [ -s "$f" ] || continue
+            tail -50 "$f" | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' > /tmp/msg
+            echo "::error title=$(basename $f .log) output::$(cat /tmp/msg)"
+          done
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Upgrade react-router-dom 7 and vitest 5; remove unused zod, resolvers, typography" || echo "no changes"
+          git push
